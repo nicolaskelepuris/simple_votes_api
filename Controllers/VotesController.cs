@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using VoteApi.Entities;
+using Microsoft.EntityFrameworkCore;
 
 namespace VoteApi.Controllers;
 
@@ -25,5 +26,24 @@ public class VotesController
         var vote = new Vote(ip, voteValue);
         _dataContext.Add(vote);
         await _dataContext.SaveChangesAsync();
+    }
+
+    [HttpGet]
+    public async Task<Response> GetVotes()
+    {
+        var queries = new List<Task<int>>()
+        {
+            _dataContext.Set<Vote>().CountAsync(_ => _.Value == VoteValue.Willy),
+            _dataContext.Set<Vote>().CountAsync(_ => _.Value == VoteValue.Other)
+        };
+        var results = await Task.WhenAll(queries);
+
+        return new Response { Willy = results[0], Other = results[1] };
+    }
+
+    public class Response
+    {
+        public int Willy { get; set; }
+        public int Other { get; set; }
     }
 }
