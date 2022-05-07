@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using VoteApi.Entities;
 
 namespace VoteApi.UseCases
@@ -21,11 +22,16 @@ namespace VoteApi.UseCases
         public async Task VoteAsync(VoteValue voteValue)
         {
             var ip = _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString();
-            if (ip == null || !Enum.IsDefined(voteValue)) return;
+            if (ip == null || !Enum.IsDefined(voteValue) || await AlreadyVoted(ip)) return;
 
             var vote = new Vote(ip, voteValue);
             _dataContext.Add(vote);
             await _dataContext.SaveChangesAsync();
+        }
+
+        private async Task<bool> AlreadyVoted(string ip)
+        {
+            return await _dataContext.Set<Vote>().AnyAsync(_ => _.Id == ip);
         }
     }
 }
