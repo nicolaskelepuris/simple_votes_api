@@ -1,5 +1,6 @@
 using VoteApi;
 using Microsoft.EntityFrameworkCore;
+using VoteApi.Dependencies;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,6 +12,8 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<DataContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.RegisterDependencies();
 
 var app = builder.Build();
 
