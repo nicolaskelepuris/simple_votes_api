@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using VoteApi.Entities;
 using Microsoft.EntityFrameworkCore;
+using VoteApi.UseCases;
 
 namespace VoteApi.Controllers;
 
@@ -9,12 +10,14 @@ namespace VoteApi.Controllers;
 public class VotesController
 {
     private readonly DataContext _dataContext;
+    private readonly ILoadVotes _loadVotes;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public VotesController(IHttpContextAccessor httpContextAccessor, DataContext dataContext)
+    public VotesController(IHttpContextAccessor httpContextAccessor, DataContext dataContext, ILoadVotes loadVotes)
     {
         _httpContextAccessor = httpContextAccessor;
         _dataContext = dataContext;
+        _loadVotes = loadVotes;
     }
 
     [HttpPost("{voteValue}")]
@@ -29,21 +32,11 @@ public class VotesController
     }
 
     [HttpGet]
-    public async Task<ApiResponse<Response>> GetVotes()
+    public async Task<ApiResponse<LoadVotesResponse>> GetVotes()
     {
-        var queryResult = await _dataContext.Set<Vote>()
-            .GroupBy(_ => _.Value)
-            .Select(_ => new
-            {
-                Vote = _.Key,
-                Count = _.Count()
-            })
-            .ToListAsync();
+        var votes = await _loadVotes.LoadAsync();
 
-        var willy = queryResult.FirstOrDefault(_ => _.Vote == VoteValue.Willy)?.Count ?? 0;
-        var other = queryResult.FirstOrDefault(_ => _.Vote == VoteValue.Other)?.Count ?? 0;
-
-        return new ApiResponse<Response>(new Response { Willy = willy, Other = other });
+        return new ApiResponse<LoadVotesResponse>(votes);
     }
 
     public class ApiResponse<T> where T : class
@@ -54,11 +47,5 @@ public class VotesController
         }
 
         public T Data { get; set; }
-    }
-
-    public class Response
-    {
-        public int Willy { get; set; }
-        public int Other { get; set; }
     }
 }
