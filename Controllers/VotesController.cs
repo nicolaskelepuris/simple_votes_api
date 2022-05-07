@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
 using VoteApi.Entities;
-using Microsoft.EntityFrameworkCore;
 using VoteApi.UseCases;
 
 namespace VoteApi.Controllers;
@@ -9,26 +8,19 @@ namespace VoteApi.Controllers;
 [Route("[controller]")]
 public class VotesController
 {
-    private readonly DataContext _dataContext;
+    private readonly ISaveVote _saveVote;
     private readonly ILoadVotes _loadVotes;
-    private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public VotesController(IHttpContextAccessor httpContextAccessor, DataContext dataContext, ILoadVotes loadVotes)
+    public VotesController(ISaveVote saveVote, ILoadVotes loadVotes)
     {
-        _httpContextAccessor = httpContextAccessor;
-        _dataContext = dataContext;
+        _saveVote = saveVote;
         _loadVotes = loadVotes;
     }
 
     [HttpPost("{voteValue}")]
     public async Task Vote([FromRoute] VoteValue voteValue)
     {
-        var ip = _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString();
-        if (ip == null || !Enum.IsDefined(voteValue)) return;
-
-        var vote = new Vote(ip, voteValue);
-        _dataContext.Add(vote);
-        await _dataContext.SaveChangesAsync();
+        await _saveVote.VoteAsync(voteValue);
     }
 
     [HttpGet]
