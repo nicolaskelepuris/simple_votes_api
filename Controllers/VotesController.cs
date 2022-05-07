@@ -29,16 +29,31 @@ public class VotesController
     }
 
     [HttpGet]
-    public async Task<Response> GetVotes()
+    public async Task<ApiResponse<Response>> GetVotes()
     {
-        var queries = new List<Task<int>>()
-        {
-            _dataContext.Set<Vote>().CountAsync(_ => _.Value == VoteValue.Willy),
-            _dataContext.Set<Vote>().CountAsync(_ => _.Value == VoteValue.Other)
-        };
-        var results = await Task.WhenAll(queries);
+        var queryResult = await _dataContext.Set<Vote>()
+            .GroupBy(_ => _.Value)
+            .Select(_ => new
+            {
+                Vote = _.Key,
+                Count = _.Count()
+            })
+            .ToListAsync();
 
-        return new Response { Willy = results[0], Other = results[1] };
+        var willy = queryResult.FirstOrDefault(_ => _.Vote == VoteValue.Willy)?.Count ?? 0;
+        var other = queryResult.FirstOrDefault(_ => _.Vote == VoteValue.Other)?.Count ?? 0;
+
+        return new ApiResponse<Response>(new Response { Willy = willy, Other = other });
+    }
+
+    public class ApiResponse<T> where T : class
+    {
+        public ApiResponse(T data)
+        {
+            Data = data;
+        }
+
+        public T Data { get; set; }
     }
 
     public class Response
